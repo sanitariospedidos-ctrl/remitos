@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>RECEPCIÓN MITRE</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#12315c">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root{
+    --azul:#12315c;
+    --azul-osc:#0b2244;
+    --amarillo:#f5a300;
+    --verde:#1f9d55;
+    --rojo:#d9342b;
+    --gris:#f2f4f7;
+    --borde:#d7dce4;
+    --texto:#1c2430;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--gris);color:var(--texto);padding-bottom:30px}
+
+  header{background:var(--azul);color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+  header h1{font-size:17px;letter-spacing:.5px}
+  header h1 small{display:block;font-size:11px;font-weight:400;color:#bcd0ee;letter-spacing:1.5px}
+  #reloj{text-align:right;font-variant-numeric:tabular-nums}
+  #reloj .hora{font-size:22px;font-weight:700;line-height:1}
+  #reloj .fecha{font-size:11px;color:#bcd0ee;margin-top:2px}
+  #btnConfig{background:none;border:none;color:#7f96bd;font-size:18px;margin-left:10px}
+
+  main{padding:14px;max-width:520px;margin:0 auto}
+
+  .campo{background:#fff;border:1px solid var(--borde);border-radius:12px;padding:12px 14px;margin-bottom:12px}
+  .campo label{display:block;font-size:12px;font-weight:700;letter-spacing:1px;color:#5a6a80;margin-bottom:8px}
+
+  input[type=text],textarea{width:100%;border:1px solid var(--borde);border-radius:8px;padding:13px 12px;font-size:17px;background:#fbfcfe}
+  input:focus,textarea:focus{outline:2px solid var(--azul);border-color:var(--azul)}
+  textarea{resize:none;height:64px}
+
+  /* bultos */
+  .bultos-row{display:flex;align-items:stretch;gap:10px}
+  .bultos-row button{flex:0 0 64px;font-size:30px;font-weight:700;border:none;border-radius:10px;background:var(--azul);color:#fff}
+  .bultos-row button:active{background:var(--azul-osc)}
+  #bultos{flex:1;text-align:center;font-size:28px;font-weight:700;border:1px solid var(--borde);border-radius:10px;background:#fbfcfe;width:100%}
+
+  /* fotos */
+  #btnFoto{width:100%;padding:16px;font-size:17px;font-weight:700;border:2px dashed var(--azul);border-radius:10px;background:#eef3fb;color:var(--azul)}
+  #btnFoto:active{background:#dde8f8}
+  #grillaFotos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+  .mini{position:relative;border-radius:8px;overflow:hidden;border:1px solid var(--borde);aspect-ratio:3/4;background:#000}
+  .mini img{width:100%;height:100%;object-fit:cover}
+  .mini .num{position:absolute;left:0;top:0;background:var(--azul);color:#fff;font-size:12px;font-weight:700;padding:2px 7px;border-bottom-right-radius:8px}
+  .mini .del{position:absolute;right:4px;top:4px;width:28px;height:28px;border:none;border-radius:50%;background:var(--rojo);color:#fff;font-size:15px;font-weight:700;line-height:1}
+  #contFotos{font-size:13px;color:#5a6a80;margin-top:8px;text-align:center}
+
+  #btnEnviar{width:100%;padding:20px;font-size:20px;font-weight:800;letter-spacing:1px;border:none;border-radius:14px;background:var(--verde);color:#fff;box-shadow:0 4px 12px rgba(31,157,85,.35)}
+  #btnEnviar:disabled{background:#9db5a8;box-shadow:none}
+  #btnEnviar:active:not(:disabled){transform:scale(.98)}
+
+  #estado{margin-top:12px;padding:12px;border-radius:10px;font-size:15px;font-weight:600;text-align:center;display:none}
+  #estado.err{display:block;background:#fdeceb;color:var(--rojo);border:1px solid #f3b6b2}
+  #estado.info{display:block;background:#eef3fb;color:var(--azul);border:1px solid #c4d4ef}
+
+  /* pantalla exito */
+  #okScreen{position:fixed;inset:0;background:var(--verde);color:#fff;display:none;flex-direction:column;justify-content:center;align-items:center;z-index:50;text-align:center;padding:20px}
+  #okScreen .tilde{font-size:90px;line-height:1}
+  #okScreen h2{font-size:24px;margin:14px 0 6px}
+  #okScreen p{font-size:16px;opacity:.9}
+  #okScreen button{margin-top:34px;padding:18px 34px;font-size:18px;font-weight:800;border:none;border-radius:14px;background:#fff;color:var(--verde)}
+
+  /* config */
+  #cfgScreen{position:fixed;inset:0;background:rgba(10,20,40,.92);display:none;justify-content:center;align-items:center;z-index:60;padding:20px}
+  #cfgBox{background:#fff;border-radius:14px;padding:20px;width:100%;max-width:460px}
+  #cfgBox h3{color:var(--azul);margin-bottom:6px}
+  #cfgBox p{font-size:13px;color:#5a6a80;margin-bottom:12px}
+  #cfgUrl{width:100%;border:1px solid var(--borde);border-radius:8px;padding:12px;font-size:14px;margin-bottom:12px}
+  #cfgBox .fila{display:flex;gap:10px}
+  #cfgBox button{flex:1;padding:14px;font-size:15px;font-weight:700;border:none;border-radius:10px}
+  #cfgGuardar{background:var(--azul);color:#fff}
+  #cfgCerrar{background:var(--gris);color:var(--texto)}
+
+  .franja{height:5px;background:repeating-linear-gradient(45deg,var(--amarillo),var(--amarillo) 14px,var(--azul-osc) 14px,var(--azul-osc) 28px)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>RECEPCIÓN DE MERCADERÍA<small>SANITARIOS MITRE</small></h1>
+  <div style="display:flex;align-items:center">
+    <div id="reloj"><div class="hora">--:--</div><div class="fecha">--/--/----</div></div>
+    <button id="btnConfig" onclick="abrirCfg()">⚙️</button>
+  </div>
+</header>
+<div class="franja"></div>
+
+<main>
+  <div class="campo">
+    <label>PROVEEDOR</label>
+    <input type="text" id="proveedor" list="listaProv" placeholder="Nombre del proveedor" autocomplete="off">
+    <datalist id="listaProv"></datalist>
+  </div>
+
+  <div class="campo">
+    <label>CANTIDAD DE BULTOS</label>
+    <div class="bultos-row">
+      <button type="button" onclick="cambiarBultos(-1)">−</button>
+      <input type="number" id="bultos" value="1" min="1" inputmode="numeric">
+      <button type="button" onclick="cambiarBultos(1)">+</button>
+    </div>
+  </div>
+
+  <div class="campo">
+    <label>FOTOS DE REMITOS</label>
+    <button type="button" id="btnFoto" onclick="document.getElementById('inputFoto').click()">📷 SACAR FOTO</button>
+    <input type="file" id="inputFoto" accept="image/*" capture="environment" multiple style="display:none">
+    <div id="grillaFotos"></div>
+    <div id="contFotos">Sin fotos todavía</div>
+  </div>
+
+  <div class="campo">
+    <label>OBSERVACIONES (opcional)</label>
+    <textarea id="obs" placeholder="Ej: llegó un bulto roto, falta un remito..."></textarea>
+  </div>
+
+  <button id="btnEnviar" onclick="enviar()">✔ ENVIAR INGRESO</button>
+  <div id="estado"></div>
+</main>
+
+<div id="okScreen">
+  <div class="tilde">✅</div>
+  <h2>INGRESO ENVIADO</h2>
+  <p id="okDetalle"></p>
+  <button onclick="nuevoIngreso()">➕ NUEVO INGRESO</button>
+</div>
+
+<div id="cfgScreen">
+  <div id="cfgBox">
+    <h3>Configuración</h3>
+    <p>Pegá acá la URL del Apps Script (la que termina en <b>/exec</b>). Se guarda una sola vez en este celular.</p>
+    <input type="text" id="cfgUrl" placeholder="https://script.google.com/macros/s/....../exec">
+    <div class="fila">
+      <button id="cfgGuardar" onclick="guardarCfg()">GUARDAR</button>
+      <button id="cfgCerrar" onclick="cerrarCfg()">CERRAR</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== CONFIG ====================
+// Si querés dejar la URL fija en el archivo, pegala acá entre las comillas:
+const URL_SCRIPT_FIJA = "";
+// ================================================
+
+function getUrl(){
+  return localStorage.getItem('recepcion_url') || URL_SCRIPT_FIJA || "";
+}
+
+// ---------- reloj ----------
+function tick(){
+  const n = new Date();
+  const p = x => String(x).padStart(2,'0');
+  document.querySelector('#reloj .hora').textContent = p(n.getHours())+':'+p(n.getMinutes());
+  document.querySelector('#reloj .fecha').textContent = p(n.getDate())+'/'+p(n.getMonth()+1)+'/'+n.getFullYear();
+}
+setInterval(tick,1000); tick();
+
+// ---------- proveedores recientes ----------
+function cargarProveedores(){
+  const lista = JSON.parse(localStorage.getItem('recepcion_provs')||'[]');
+  document.getElementById('listaProv').innerHTML =
+    lista.map(p=>`<option value="${p.replace(/"/g,'&quot;')}">`).join('');
+}
+function recordarProveedor(nombre){
+  let lista = JSON.parse(localStorage.getItem('recepcion_provs')||'[]');
+  lista = lista.filter(p=>p.toUpperCase()!==nombre.toUpperCase());
+  lista.unshift(nombre);
+  localStorage.setItem('recepcion_provs', JSON.stringify(lista.slice(0,40)));
+}
+cargarProveedores();
+
+// ---------- bultos ----------
+function cambiarBultos(d){
+  const el = document.getElementById('bultos');
+  let v = parseInt(el.value)||1;
+  v = Math.max(1, v+d);
+  el.value = v;
+}
+
+// ---------- fotos ----------
+let fotos = []; // dataURLs comprimidas
+
+document.getElementById('inputFoto').addEventListener('change', async (e)=>{
+  const files = Array.from(e.target.files||[]);
+  e.target.value = '';
+  if(!files.length) return;
+  setEstado('info','Procesando foto'+(files.length>1?'s':'')+'...');
+  for(const f of files){
+    try{
+      const data = await comprimir(f);
+      fotos.push(data);
+    }catch(err){ console.error(err); }
+  }
+  setEstado('');
+  pintarFotos();
+});
+
+function comprimir(file){
+  return new Promise((res,rej)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = ()=>{
+      const MAX = 1400;
+      let w = img.width, h = img.height;
+      if(Math.max(w,h) > MAX){
+        const esc = MAX/Math.max(w,h);
+        w = Math.round(w*esc); h = Math.round(h*esc);
+      }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL('image/jpeg',0.72));
+    };
+    img.onerror = rej;
+    img.src = url;
+  });
+}
+
+function pintarFotos(){
+  const g = document.getElementById('grillaFotos');
+  g.innerHTML = fotos.map((f,i)=>`
+    <div class="mini">
+      <span class="num">${i+1}</span>
+      <img src="${f}">
+      <button class="del" onclick="borrarFoto(${i})">✕</button>
+    </div>`).join('');
+  document.getElementById('contFotos').textContent =
+    fotos.length ? fotos.length + ' foto' + (fotos.length>1?'s':'') + ' cargada' + (fotos.length>1?'s':'') : 'Sin fotos todavía';
+}
+function borrarFoto(i){ fotos.splice(i,1); pintarFotos(); }
+
+// ---------- estado ----------
+function setEstado(tipo,msj){
+  const el = document.getElementById('estado');
+  el.className = tipo||'';
+  el.textContent = msj||'';
+  el.style.display = tipo ? 'block' : 'none';
+}
+
+// ---------- enviar ----------
+async function enviar(){
+  const url = getUrl();
+  if(!url){ abrirCfg(); return; }
+
+  const proveedor = document.getElementById('proveedor').value.trim();
+  const bultos = parseInt(document.getElementById('bultos').value)||0;
+  const obs = document.getElementById('obs').value.trim();
+
+  if(!proveedor){ setEstado('err','⚠ Falta el nombre del proveedor'); return; }
+  if(bultos < 1){ setEstado('err','⚠ Cargá la cantidad de bultos'); return; }
+  if(!fotos.length){
+    if(!confirm('No sacaste ninguna foto del remito. ¿Enviar igual?')) return;
+  }
+
+  const n = new Date();
+  const p = x => String(x).padStart(2,'0');
+  const payload = {
+    proveedor: proveedor,
+    bultos: bultos,
+    obs: obs,
+    fecha: p(n.getDate())+'/'+p(n.getMonth()+1)+'/'+n.getFullYear(),
+    hora: p(n.getHours())+':'+p(n.getMinutes()),
+    fotos: fotos.map(f => f.split(',')[1]) // base64 sin encabezado
+  };
+
+  const btn = document.getElementById('btnEnviar');
+  btn.disabled = true;
+  btn.textContent = '⏳ ENVIANDO...';
+  setEstado('info','Enviando ingreso, no cierres la página...');
+
+  try{
+    const resp = await fetch(url, { method:'POST', body: JSON.stringify(payload) });
+    const data = await resp.json();
+    if(!data.ok) throw new Error(data.error||'Error del servidor');
+
+    recordarProveedor(proveedor);
+    cargarProveedores();
+    document.getElementById('okDetalle').textContent =
+      proveedor + ' — ' + bultos + ' bulto' + (bultos>1?'s':'') + ' — ' + payload.fotos.length + ' foto' + (payload.fotos.length===1?'':'s');
+    document.getElementById('okScreen').style.display = 'flex';
+    setEstado('');
+  }catch(err){
+    setEstado('err','❌ No se pudo enviar. Revisá la señal y tocá ENVIAR de nuevo. ('+err.message+')');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = '✔ ENVIAR INGRESO';
+  }
+}
+
+function nuevoIngreso(){
+  document.getElementById('okScreen').style.display = 'none';
+  document.getElementById('proveedor').value = '';
+  document.getElementById('bultos').value = 1;
+  document.getElementById('obs').value = '';
+  fotos = [];
+  pintarFotos();
+  window.scrollTo(0,0);
+}
+
+// ---------- config ----------
+function abrirCfg(){
+  document.getElementById('cfgUrl').value = getUrl();
+  document.getElementById('cfgScreen').style.display = 'flex';
+}
+function cerrarCfg(){ document.getElementById('cfgScreen').style.display = 'none'; }
+function guardarCfg(){
+  const u = document.getElementById('cfgUrl').value.trim();
+  if(u && !u.includes('/exec')){ alert('La URL tiene que terminar en /exec'); return; }
+  localStorage.setItem('recepcion_url', u);
+  cerrarCfg();
+}
+
+// si no hay URL configurada, avisar
+if(!getUrl()){ setEstado('info','⚙️ Primero configurá la URL del script tocando el engranaje de arriba.'); }
+
+// registrar service worker (para instalarse como app)
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>

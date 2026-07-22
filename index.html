@@ -4,12 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>RECEPCIÓN MITRE</title>
-<link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#12315c">
-<link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-192.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
   :root{
     --azul:#12315c;
@@ -66,14 +60,14 @@
   #estado.info{display:block;background:#eef3fb;color:var(--azul);border:1px solid #c4d4ef}
 
   /* pantalla exito */
-  #okScreen{position:fixed;inset:0;background:var(--verde);color:#fff;display:none;flex-direction:column;justify-content:center;align-items:center;z-index:50;text-align:center;padding:20px}
+  #okScreen{position:fixed;inset:0;background:var(--verde);color:#fff;display:none;flex-direction:column;justify-content:center;align-items:center;z-index:70;text-align:center;padding:20px}
   #okScreen .tilde{font-size:90px;line-height:1}
   #okScreen h2{font-size:24px;margin:14px 0 6px}
   #okScreen p{font-size:16px;opacity:.9}
   #okScreen button{margin-top:34px;padding:18px 34px;font-size:18px;font-weight:800;border:none;border-radius:14px;background:#fff;color:var(--verde)}
 
   /* config */
-  #cfgScreen{position:fixed;inset:0;background:rgba(10,20,40,.92);display:none;justify-content:center;align-items:center;z-index:60;padding:20px}
+  #cfgScreen{position:fixed;inset:0;background:rgba(10,20,40,.92);display:none;justify-content:center;align-items:center;z-index:80;padding:20px}
   #cfgBox{background:#fff;border-radius:14px;padding:20px;width:100%;max-width:460px}
   #cfgBox h3{color:var(--azul);margin-bottom:6px}
   #cfgBox p{font-size:13px;color:#5a6a80;margin-bottom:12px}
@@ -82,6 +76,23 @@
   #cfgBox button{flex:1;padding:14px;font-size:15px;font-weight:700;border:none;border-radius:10px}
   #cfgGuardar{background:var(--azul);color:#fff}
   #cfgCerrar{background:var(--gris);color:var(--texto)}
+
+  /* ===== escáner de documento ===== */
+  #scanScreen{position:fixed;inset:0;background:#0a1730;display:none;flex-direction:column;z-index:55}
+  .scan-top{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;color:#fff}
+  .scan-top button{background:none;border:none;color:#fff;font-size:24px;padding:2px 10px}
+  .scan-top span{font-size:15px;font-weight:700;letter-spacing:.5px}
+  .scan-canvas-wrap{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:6px}
+  #scanCanvas{max-width:100%;max-height:100%;touch-action:none;border-radius:6px;background:#000;cursor:crosshair}
+  .scan-filtros{display:flex;gap:8px;padding:8px 12px;justify-content:center}
+  .scan-filtros .fsel{flex:1;max-width:150px;padding:11px 6px;border:1px solid #2c4470;border-radius:10px;background:#12233f;color:#bcd0ee;font-size:13px;font-weight:700}
+  .scan-filtros .fsel.act{background:var(--amarillo);color:#3a2600;border-color:var(--amarillo)}
+  .scan-acc{display:flex;gap:8px;padding:6px 12px 16px;align-items:stretch}
+  .scan-acc .sec{flex:0 0 auto;padding:14px 12px;border:1px solid #2c4470;border-radius:12px;background:#12233f;color:#bcd0ee;font-size:13px;font-weight:700}
+  .scan-acc .sec:active{background:#1c3358}
+  .scan-acc .pri{flex:1;padding:14px;border:none;border-radius:12px;background:var(--verde);color:#fff;font-size:16px;font-weight:800}
+  .scan-acc .pri:active{transform:scale(.98)}
+  #scanMsg{display:none;text-align:center;color:#ffd479;font-size:13px;padding:0 12px 12px}
 
   .franja{height:5px;background:repeating-linear-gradient(45deg,var(--amarillo),var(--amarillo) 14px,var(--azul-osc) 14px,var(--azul-osc) 28px)}
 </style>
@@ -115,7 +126,7 @@
 
   <div class="campo">
     <label>FOTOS DE REMITOS</label>
-    <button type="button" id="btnFoto" onclick="document.getElementById('inputFoto').click()">📷 SACAR FOTO</button>
+    <button type="button" id="btnFoto" onclick="document.getElementById('inputFoto').click()">📷 ESCANEAR REMITO</button>
     <input type="file" id="inputFoto" accept="image/*" capture="environment" multiple style="display:none">
     <div id="grillaFotos"></div>
     <div id="contFotos">Sin fotos todavía</div>
@@ -135,6 +146,29 @@
   <h2>INGRESO ENVIADO</h2>
   <p id="okDetalle"></p>
   <button onclick="nuevoIngreso()">➕ NUEVO INGRESO</button>
+</div>
+
+<!-- ESCÁNER -->
+<div id="scanScreen">
+  <div class="scan-top">
+    <button onclick="scanCancelar()" title="Descartar">✕</button>
+    <span id="scanTitulo">Ajustá las esquinas del remito</span>
+    <button onclick="scanGirar()" title="Girar">⟳</button>
+  </div>
+  <div class="scan-canvas-wrap">
+    <canvas id="scanCanvas"></canvas>
+  </div>
+  <div class="scan-filtros">
+    <button class="fsel act" data-f="doc" onclick="scanSetFiltro('doc')">📄 Documento</button>
+    <button class="fsel" data-f="byn" onclick="scanSetFiltro('byn')">◼️ B/N</button>
+    <button class="fsel" data-f="color" onclick="scanSetFiltro('color')">🎨 Color</button>
+  </div>
+  <div id="scanMsg"></div>
+  <div class="scan-acc">
+    <button class="sec" onclick="scanAuto(false)">✨ Auto</button>
+    <button class="sec" onclick="scanSinRecortar()">Sin recortar</button>
+    <button class="pri" onclick="scanConfirmar()">✔ USAR FOTO</button>
+  </div>
 </div>
 
 <div id="cfgScreen">
@@ -191,36 +225,27 @@ function cambiarBultos(d){
 }
 
 // ---------- fotos ----------
-let fotos = []; // dataURLs comprimidas
+let fotos = []; // dataURLs listas para enviar
 
-document.getElementById('inputFoto').addEventListener('change', async (e)=>{
+document.getElementById('inputFoto').addEventListener('change', (e)=>{
   const files = Array.from(e.target.files||[]);
   e.target.value = '';
   if(!files.length) return;
-  setEstado('info','Procesando foto'+(files.length>1?'s':'')+'...');
-  for(const f of files){
-    try{
-      const data = await comprimir(f);
-      fotos.push(data);
-    }catch(err){ console.error(err); }
-  }
-  setEstado('');
-  pintarFotos();
+  scanQueue = files;
+  scanIdx = 0;
+  abrirScanner(scanQueue[0]);
 });
 
+// compresión simple (usada por "sin recortar" también como respaldo)
 function comprimir(file){
   return new Promise((res,rej)=>{
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = ()=>{
-      const MAX = 1400;
+      const MAX = 1600;
       let w = img.width, h = img.height;
-      if(Math.max(w,h) > MAX){
-        const esc = MAX/Math.max(w,h);
-        w = Math.round(w*esc); h = Math.round(h*esc);
-      }
-      const c = document.createElement('canvas');
-      c.width = w; c.height = h;
+      if(Math.max(w,h) > MAX){ const e = MAX/Math.max(w,h); w=Math.round(w*e); h=Math.round(h*e); }
+      const c = document.createElement('canvas'); c.width=w; c.height=h;
       c.getContext('2d').drawImage(img,0,0,w,h);
       URL.revokeObjectURL(url);
       res(c.toDataURL('image/jpeg',0.72));
@@ -242,6 +267,330 @@ function pintarFotos(){
     fotos.length ? fotos.length + ' foto' + (fotos.length>1?'s':'') + ' cargada' + (fotos.length>1?'s':'') : 'Sin fotos todavía';
 }
 function borrarFoto(i){ fotos.splice(i,1); pintarFotos(); }
+
+// ==================================================================
+//  ESCÁNER DE DOCUMENTO (offline, sin librerías)
+// ==================================================================
+let scanQueue = [];      // File[] pendientes
+let scanIdx = 0;
+let workCanvas = null;   // imagen de trabajo (color, <=1600px)
+let workData = null;     // ImageData de workCanvas
+let scanW = 0, scanH = 0;
+let corners = [];        // [TL,TR,BR,BL] en coords de workCanvas
+let scanFiltro = 'doc';
+let dragIdx = -1;
+
+const scanScreenEl = () => document.getElementById('scanScreen');
+const scanCanvasEl = () => document.getElementById('scanCanvas');
+
+function defaultCorners(w,h){
+  const mx = w*0.06, my = h*0.06;
+  return [{x:mx,y:my},{x:w-mx,y:my},{x:w-mx,y:h-my},{x:mx,y:h-my}];
+}
+
+function abrirScanner(file){
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+  img.onload = ()=>{
+    URL.revokeObjectURL(url);
+    let w = img.width, h = img.height;
+    const M = 1600;
+    if(Math.max(w,h) > M){ const e = M/Math.max(w,h); w=Math.round(w*e); h=Math.round(h*e); }
+    workCanvas = document.createElement('canvas');
+    workCanvas.width = w; workCanvas.height = h;
+    workCanvas.getContext('2d').drawImage(img,0,0,w,h);
+    workData = workCanvas.getContext('2d').getImageData(0,0,w,h);
+    scanW = w; scanH = h;
+    const cv = scanCanvasEl();
+    cv.width = w; cv.height = h;
+    corners = defaultCorners(w,h);
+    scanFiltro = 'doc'; marcarFiltro();
+    scanMsg('');
+    scanScreenEl().style.display = 'flex';
+    scanAuto(true);   // intento automático silencioso
+    dibujarScan();
+  };
+  img.onerror = ()=>{ // si no se puede leer, guardo comprimida y sigo
+    comprimir(file).then(d=>{ fotos.push(d); pintarFotos(); }).finally(siguienteScan);
+  };
+  img.src = url;
+}
+
+function siguienteScan(){
+  scanIdx++;
+  if(scanIdx < scanQueue.length){
+    abrirScanner(scanQueue[scanIdx]);
+  }else{
+    scanQueue = []; scanIdx = 0;
+    scanScreenEl().style.display = 'none';
+    scanMsg('');
+  }
+}
+
+function scanCancelar(){ siguienteScan(); }
+function scanSetFiltro(f){ scanFiltro = f; marcarFiltro(); }
+function marcarFiltro(){
+  document.querySelectorAll('.fsel').forEach(b=>b.classList.toggle('act', b.dataset.f===scanFiltro));
+}
+function scanMsg(t){
+  const m = document.getElementById('scanMsg');
+  m.textContent = t||''; m.style.display = t ? 'block' : 'none';
+}
+
+// ---- dibujo del recorte ----
+function dibujarScan(){
+  const cv = scanCanvasEl(), ctx = cv.getContext('2d');
+  ctx.clearRect(0,0,scanW,scanH);
+  ctx.drawImage(workCanvas,0,0);
+  // oscurecer lo de afuera
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0,0,scanW,scanH);
+  ctx.moveTo(corners[0].x,corners[0].y);
+  for(let i=1;i<4;i++) ctx.lineTo(corners[i].x,corners[i].y);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(6,14,30,.55)';
+  ctx.fill('evenodd');
+  ctx.restore();
+  // marco
+  ctx.beginPath();
+  ctx.moveTo(corners[0].x,corners[0].y);
+  for(let i=1;i<4;i++) ctx.lineTo(corners[i].x,corners[i].y);
+  ctx.closePath();
+  ctx.strokeStyle = '#f5a300';
+  ctx.lineWidth = Math.max(2, scanW/280);
+  ctx.stroke();
+  // manijas
+  const r = Math.max(11, scanW/42);
+  for(const c of corners){
+    ctx.beginPath(); ctx.arc(c.x,c.y,r,0,7); ctx.fillStyle='#fff'; ctx.fill();
+    ctx.lineWidth = Math.max(2, scanW/300); ctx.strokeStyle='#12315c'; ctx.stroke();
+    ctx.beginPath(); ctx.arc(c.x,c.y,r*0.38,0,7); ctx.fillStyle='#f5a300'; ctx.fill();
+  }
+}
+
+// ---- arrastrar esquinas ----
+function posEvt(e){
+  const cv = scanCanvasEl(), r = cv.getBoundingClientRect();
+  return { x:(e.clientX-r.left)*cv.width/r.width, y:(e.clientY-r.top)*cv.height/r.height };
+}
+function initScanEvents(){
+  const cv = scanCanvasEl();
+  cv.addEventListener('pointerdown', e=>{
+    const {x,y} = posEvt(e);
+    const hit = Math.max(16, scanW/26);
+    let best=-1, bd=hit;
+    for(let i=0;i<4;i++){ const d=Math.hypot(corners[i].x-x,corners[i].y-y); if(d<bd){bd=d;best=i;} }
+    if(best>=0){ dragIdx=best; try{cv.setPointerCapture(e.pointerId);}catch(_){} e.preventDefault(); }
+  });
+  cv.addEventListener('pointermove', e=>{
+    if(dragIdx<0) return;
+    const {x,y} = posEvt(e);
+    corners[dragIdx] = { x:Math.min(scanW,Math.max(0,x)), y:Math.min(scanH,Math.max(0,y)) };
+    dibujarScan();
+  });
+  const soltar = ()=>{ dragIdx=-1; };
+  cv.addEventListener('pointerup', soltar);
+  cv.addEventListener('pointercancel', soltar);
+}
+
+// ---- detección automática de la hoja ----
+function otsu(hist,total){
+  let sum=0; for(let i=0;i<256;i++) sum+=i*hist[i];
+  let sumB=0,wB=0,max=0,thr=127;
+  for(let i=0;i<256;i++){
+    wB+=hist[i]; if(!wB) continue;
+    const wF=total-wB; if(!wF) break;
+    sumB+=i*hist[i];
+    const mB=sumB/wB, mF=(sum-sumB)/wF;
+    const between=wB*wF*(mB-mF)*(mB-mF);
+    if(between>max){ max=between; thr=i; }
+  }
+  return thr;
+}
+function detectarHoja(){
+  const TW=200, sc=TW/scanW, TH=Math.max(1,Math.round(scanH*sc));
+  const c=document.createElement('canvas'); c.width=TW; c.height=TH;
+  const cx=c.getContext('2d'); cx.drawImage(workCanvas,0,0,TW,TH);
+  const d=cx.getImageData(0,0,TW,TH).data;
+  const N=TW*TH, gray=new Uint8Array(N), hist=new Array(256).fill(0);
+  for(let i=0;i<N;i++){ const g=(0.299*d[i*4]+0.587*d[i*4+1]+0.114*d[i*4+2])|0; gray[i]=g; hist[g]++; }
+  const thr=otsu(hist,N);
+  const on=new Uint8Array(N);
+  for(let i=0;i<N;i++) on[i]= gray[i]>thr ? 1 : 0;
+  // componente clara más grande (4-conexa)
+  const lab=new Uint8Array(N);
+  let best=null,bestSize=0; const st=[];
+  for(let i=0;i<N;i++){
+    if(on[i]&&!lab[i]){
+      st.length=0; st.push(i); lab[i]=1;
+      const px=[]; let size=0;
+      while(st.length){
+        const p=st.pop(); size++;
+        const x=p%TW, y=(p/TW)|0; px.push(x,y);
+        if(x>0     && on[p-1]  && !lab[p-1]) { lab[p-1]=1;  st.push(p-1); }
+        if(x<TW-1  && on[p+1]  && !lab[p+1]) { lab[p+1]=1;  st.push(p+1); }
+        if(y>0     && on[p-TW] && !lab[p-TW]){ lab[p-TW]=1; st.push(p-TW); }
+        if(y<TH-1  && on[p+TW] && !lab[p+TW]){ lab[p+TW]=1; st.push(p+TW); }
+      }
+      if(size>bestSize){ bestSize=size; best=px; }
+    }
+  }
+  if(!best || bestSize<0.10*N || bestSize>0.985*N) return null;
+  let tl,tr,br,bl, sMin=1e9,sMax=-1e9,dMin=1e9,dMax=-1e9;
+  for(let k=0;k<best.length;k+=2){
+    const x=best[k], y=best[k+1], s=x+y, df=x-y;
+    if(s<sMin){ sMin=s; tl=[x,y]; }
+    if(s>sMax){ sMax=s; br=[x,y]; }
+    if(df>dMax){ dMax=df; tr=[x,y]; }
+    if(df<dMin){ dMin=df; bl=[x,y]; }
+  }
+  const S=1/sc;
+  return [ {x:tl[0]*S,y:tl[1]*S},{x:tr[0]*S,y:tr[1]*S},{x:br[0]*S,y:br[1]*S},{x:bl[0]*S,y:bl[1]*S} ];
+}
+function scanAuto(silencioso){
+  const res = detectarHoja();
+  if(res){ corners=res; dibujarScan(); if(!silencioso) scanMsg(''); }
+  else if(!silencioso){ scanMsg('No pude detectar la hoja sola. Ajustá las esquinas con el dedo.'); }
+}
+
+// ---- girar 90° ----
+function scanGirar(){
+  const nw=scanH, nh=scanW;
+  const tmp=document.createElement('canvas'); tmp.width=nw; tmp.height=nh;
+  const t=tmp.getContext('2d');
+  t.translate(nw,0); t.rotate(Math.PI/2);
+  t.drawImage(workCanvas,0,0);
+  workCanvas=tmp; workData=t.getImageData(0,0,nw,nh);
+  scanW=nw; scanH=nh;
+  const cv=scanCanvasEl(); cv.width=nw; cv.height=nh;
+  corners=defaultCorners(nw,nh);
+  scanAuto(true); dibujarScan();
+}
+
+// ---- homografía (from -> to) por eliminación gaussiana ----
+function homografia(from,to){
+  const A=[], b=[];
+  for(let i=0;i<4;i++){
+    const x=from[i].x, y=from[i].y, X=to[i].x, Y=to[i].y;
+    A.push([x,y,1,0,0,0,-X*x,-X*y]); b.push(X);
+    A.push([0,0,0,x,y,1,-Y*x,-Y*y]); b.push(Y);
+  }
+  const n=8;
+  for(let col=0;col<n;col++){
+    let piv=col;
+    for(let r=col+1;r<n;r++) if(Math.abs(A[r][col])>Math.abs(A[piv][col])) piv=r;
+    const ta=A[col]; A[col]=A[piv]; A[piv]=ta;
+    const tb=b[col]; b[col]=b[piv]; b[piv]=tb;
+    const dv=A[col][col]||1e-9;
+    for(let r=0;r<n;r++){
+      if(r===col) continue;
+      const f=A[r][col]/dv;
+      for(let cc=col;cc<n;cc++) A[r][cc]-=f*A[col][cc];
+      b[r]-=f*b[col];
+    }
+  }
+  const h=[];
+  for(let i=0;i<n;i++) h[i]=b[i]/(A[i][i]||1e-9);
+  return [h[0],h[1],h[2],h[3],h[4],h[5],h[6],h[7],1];
+}
+
+// ---- realce tipo "documento" (saca sombra / blanquea papel) ----
+function aplicarRealce(ctx,W,H,filtro){
+  const img=ctx.getImageData(0,0,W,H), p=img.data;
+  // fondo suave = imagen muy reducida y vuelta a agrandar
+  const s=Math.max(1,Math.round(Math.max(W,H)/45));
+  const bw=Math.max(1,Math.round(W/s)), bh=Math.max(1,Math.round(H/s));
+  const bc=document.createElement('canvas'); bc.width=bw; bc.height=bh;
+  bc.getContext('2d').drawImage(ctx.canvas,0,0,bw,bh);
+  const uc=document.createElement('canvas'); uc.width=W; uc.height=H;
+  const ux=uc.getContext('2d'); ux.imageSmoothingEnabled=true; ux.drawImage(bc,0,0,W,H);
+  const bg=ux.getImageData(0,0,W,H).data;
+  for(let i=0;i<p.length;i+=4){
+    if(filtro==='byn'){
+      const g   = 0.299*p[i]+0.587*p[i+1]+0.114*p[i+2];
+      const gbg = 0.299*bg[i]+0.587*bg[i+1]+0.114*bg[i+2];
+      let nv = g/Math.max(1,gbg)*255;
+      nv = (nv-150)*2.0 + 168;
+      nv = nv<0?0:nv>255?255:nv;
+      p[i]=p[i+1]=p[i+2]=nv;
+    }else{ // doc: color limpio
+      for(let c=0;c<3;c++){
+        let v = p[i+c]/Math.max(1,bg[i+c])*255;
+        v = (v-128)*1.18 + 132;
+        p[i+c] = v<0?0:v>255?255:v;
+      }
+    }
+  }
+  ctx.putImageData(img,0,0);
+}
+
+// ---- generar la foto escaneada (warp + realce) ----
+function escanear(cn, filtro){
+  const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  let Wd=Math.round(Math.max(dist(cn[0],cn[1]),dist(cn[3],cn[2])));
+  let Hd=Math.round(Math.max(dist(cn[0],cn[3]),dist(cn[1],cn[2])));
+  const MX=1400, mx=Math.max(Wd,Hd);
+  if(mx>MX){ const e=MX/mx; Wd=Math.round(Wd*e); Hd=Math.round(Hd*e); }
+  Wd=Math.max(20,Wd); Hd=Math.max(20,Hd);
+  const dst=[{x:0,y:0},{x:Wd,y:0},{x:Wd,y:Hd},{x:0,y:Hd}];
+  const M=homografia(dst,cn); // destino -> origen
+  const out=new Uint8ClampedArray(Wd*Hd*4);
+  const sd=workData.data, sw=scanW, sh=scanH;
+  for(let y=0;y<Hd;y++){
+    for(let x=0;x<Wd;x++){
+      const den=M[6]*x+M[7]*y+M[8];
+      const u=(M[0]*x+M[1]*y+M[2])/den;
+      const v=(M[3]*x+M[4]*y+M[5])/den;
+      const o=(y*Wd+x)*4;
+      if(u<0||v<0||u>=sw-1||v>=sh-1){ out[o]=out[o+1]=out[o+2]=255; out[o+3]=255; continue; }
+      const x0=u|0, y0=v|0, fx=u-x0, fy=v-y0;
+      const i00=(y0*sw+x0)*4, i10=i00+4, i01=i00+sw*4, i11=i01+4;
+      const r0=sd[i00]  +(sd[i10]  -sd[i00]  )*fx, r1=sd[i01]  +(sd[i11]  -sd[i01]  )*fx;
+      const g0=sd[i00+1]+(sd[i10+1]-sd[i00+1])*fx, g1=sd[i01+1]+(sd[i11+1]-sd[i01+1])*fx;
+      const b0=sd[i00+2]+(sd[i10+2]-sd[i00+2])*fx, b1=sd[i01+2]+(sd[i11+2]-sd[i01+2])*fx;
+      out[o]  =r0+(r1-r0)*fy;
+      out[o+1]=g0+(g1-g0)*fy;
+      out[o+2]=b0+(b1-b0)*fy;
+      out[o+3]=255;
+    }
+  }
+  const oc=document.createElement('canvas'); oc.width=Wd; oc.height=Hd;
+  const octx=oc.getContext('2d');
+  octx.putImageData(new ImageData(out,Wd,Hd),0,0);
+  if(filtro!=='color') aplicarRealce(octx,Wd,Hd,filtro);
+  return oc.toDataURL('image/jpeg',0.75);
+}
+
+function scanConfirmar(){
+  scanMsg('Procesando...');
+  setTimeout(()=>{
+    try{
+      const dataUrl = escanear(corners, scanFiltro);
+      fotos.push(dataUrl); pintarFotos();
+    }catch(err){
+      console.error(err);
+      // respaldo: guardo la imagen entera sin recortar
+      try{ fotos.push(workCanvas.toDataURL('image/jpeg',0.75)); pintarFotos(); }catch(_){}
+    }
+    siguienteScan();
+  }, 30);
+}
+
+function scanSinRecortar(){
+  let url;
+  if(scanFiltro==='color'){
+    url = workCanvas.toDataURL('image/jpeg',0.75);
+  }else{
+    // aplico solo el realce, sin enderezar
+    const c=document.createElement('canvas'); c.width=scanW; c.height=scanH;
+    const cx=c.getContext('2d'); cx.drawImage(workCanvas,0,0);
+    aplicarRealce(cx,scanW,scanH,scanFiltro);
+    url = c.toDataURL('image/jpeg',0.75);
+  }
+  fotos.push(url); pintarFotos();
+  siguienteScan();
+}
 
 // ---------- estado ----------
 function setEstado(tipo,msj){
@@ -324,13 +673,9 @@ function guardarCfg(){
   cerrarCfg();
 }
 
-// si no hay URL configurada, avisar
+// ---------- arranque ----------
+initScanEvents();
 if(!getUrl()){ setEstado('info','⚙️ Primero configurá la URL del script tocando el engranaje de arriba.'); }
-
-// registrar service worker (para instalarse como app)
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js').catch(()=>{});
-}
 </script>
 </body>
 </html>
